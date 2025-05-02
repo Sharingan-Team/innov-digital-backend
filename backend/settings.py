@@ -6,10 +6,8 @@ from decouple import Config, RepositoryEnv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load Azure Face API keys
-ENV_DIR = os.path.join(BASE_DIR, 'env', 'azure.env')
+ENV_DIR = os.path.join(BASE_DIR,'.env')
 config = Config(RepositoryEnv(ENV_DIR))
-AZURE_FACE_ENDPOINT = config('AZURE_FACE_ENDPOINT')
-AZURE_FACE_SUBSCRIPTION_KEY = config('AZURE_FACE_SUBSCRIPTION_KEY')
 
 # Email settings
 EMAIL_BACKEND = config('EMAIL_BACKEND')
@@ -33,10 +31,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
     'drf_yasg',
     'corsheaders',
-    'testapi',
+    # 'testapi',
     'authentication',
 ]
 
@@ -116,6 +115,17 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+EMAIL_FROM = 'lo_cherguelaine@esi.dz'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+
+EMAIL_HOST_USER = 'lm_soltani@esi.dz'
+EMAIL_HOST_PASSWORD = 'rjrt txkp pcje maup'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
