@@ -9,10 +9,14 @@ from django.core.files.storage import default_storage
 from django.contrib.auth import get_user_model
 from django.core.mail import EmailMessage
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 import random
 import uuid
 import requests
 import os
+
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .models import CustomUser, UserFace
 from .serializers import CustomUserSerializer, UserLoginSerializer, EmailCodeSerializer
@@ -44,6 +48,70 @@ def send_email_code(user):
     return True
 
 class SignupView(APIView):
+    parser_classes = (MultiPartParser, FormParser)  # Important: définir les parsers
+    
+    @swagger_auto_schema(
+        operation_description="Inscription d'un nouvel utilisateur avec option d'enregistrer une image faciale",
+        manual_parameters=[
+            openapi.Parameter(
+                name='username',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_STRING,
+                required=True,
+                description='Nom d\'utilisateur unique'
+            ),
+            openapi.Parameter(
+                name='email',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_EMAIL,
+                required=True,
+                description='Adresse email valide'
+            ),
+            openapi.Parameter(
+                name='password',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_PASSWORD,
+                required=True,
+                description='Mot de passe'
+            ),
+            openapi.Parameter(
+                name='first_name',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_STRING,
+                required=False,
+                description='Prénom (optionnel)'
+            ),
+            openapi.Parameter(
+                name='last_name',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_STRING,
+                required=False,
+                description='Nom de famille (optionnel)'
+            ),
+            openapi.Parameter(
+                name='face_image',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_FILE,
+                required=False,
+                description='Image du visage pour la vérification biométrique'
+            ),
+        ],
+        responses={
+            201: openapi.Response(
+                description='Utilisateur créé avec succès',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    }
+                )
+            ),
+            400: 'Données invalides'
+        }
+    )
     def post(self, request):
         # Extraire l'image si elle existe dans la requête
         face_image = request.FILES.get('face_image', None)
@@ -69,6 +137,27 @@ class SignupView(APIView):
         return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    parser_classes = (JSONParser,)
+    @swagger_auto_schema(
+        operation_description="Connexion initiale avec nom d'utilisateur et mot de passe",
+        request_body=UserLoginSerializer,
+        responses={
+            200: openapi.Response(
+                description='Connexion réussie, vérification par email requise',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'access': openapi.Schema(type=openapi.TYPE_STRING),
+                        'refresh': openapi.Schema(type=openapi.TYPE_STRING),
+                    }
+                )
+            ),
+            401: 'Identifiants invalides',
+            400: 'Données invalides'
+        }
+    )
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -97,6 +186,33 @@ class LoginView(APIView):
 
 class VerifyEmailCodeView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (JSONParser,)
+    @swagger_auto_schema(
+        operation_description="Vérification du code envoyé par email",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['code'],
+            properties={
+                'code': openapi.Schema(type=openapi.TYPE_STRING, description='Code à 6 chiffres envoyé par email'),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                description='Code email vérifié',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'email_verified': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    }
+                )
+            ),
+            400: 'Code invalide ou expiré',
+            404: 'Utilisateur non trouvé'
+        },
+        security=[{'Bearer': []}]
+    )
     def post(self, request):
         user_id = request.user.id
         
@@ -130,6 +246,35 @@ class VerifyEmailCodeView(APIView):
 
 class FaceEnrollmentView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    @swagger_auto_schema(
+        operation_description="Enregistrement d'une image faciale pour un utilisateur",
+        manual_parameters=[
+            openapi.Parameter(
+                name='face_image',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_FILE,
+                required=True,
+                description='Image du visage pour enregistrement'
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                description='Image du visage enregistrée',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    }
+                )
+            ),
+            400: 'Image non fournie',
+            404: 'Utilisateur non trouvé'
+        },
+        security=[{'Bearer': []}]
+    )
     def post(self, request):
         
         # user_id = request.session.get('pre_2fa_user_id') or request.data.get('user_id')
@@ -161,6 +306,39 @@ class FaceEnrollmentView(APIView):
 
 class FaceVerificationView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    @swagger_auto_schema(
+        operation_description="Vérification de l'identité par reconnaissance faciale",
+        manual_parameters=[
+            openapi.Parameter(
+                name='face_image',
+                in_=openapi.IN_FORM,
+                type=openapi.TYPE_FILE,
+                required=True,
+                description='Image du visage pour vérification'
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                description='Visage vérifié, connexion complète',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'access': openapi.Schema(type=openapi.TYPE_STRING),
+                        'refresh': openapi.Schema(type=openapi.TYPE_STRING),
+                    }
+                )
+            ),
+            400: 'Image non fournie ou vérification email requise',
+            401: 'Vérification faciale échouée',
+            404: 'Utilisateur non trouvé',
+            500: 'Erreur de service'
+        },
+        security=[{'Bearer': []}]
+    )
     def post(self, request):
         # user_id = request.session.get('pre_2fa_user_id') or request.data.get('user_id')
         user_id = request.user.id
