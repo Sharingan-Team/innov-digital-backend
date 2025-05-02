@@ -51,14 +51,14 @@ class SignupView(APIView):
     parser_classes = (MultiPartParser, FormParser)  # Important: définir les parsers
     
     @swagger_auto_schema(
-        operation_description="Inscription d'un nouvel utilisateur avec option d'enregistrer une image faciale",
+        operation_description="Register a new user with an option to upload a facial image",
         manual_parameters=[
             openapi.Parameter(
                 name='username',
                 in_=openapi.IN_FORM,
                 type=openapi.TYPE_STRING,
                 required=True,
-                description='Nom d\'utilisateur unique'
+                description='Unique username'
             ),
             openapi.Parameter(
                 name='email',
@@ -66,7 +66,7 @@ class SignupView(APIView):
                 type=openapi.TYPE_STRING,
                 format=openapi.FORMAT_EMAIL,
                 required=True,
-                description='Adresse email valide'
+                description='Valid email address'
             ),
             openapi.Parameter(
                 name='password',
@@ -74,33 +74,33 @@ class SignupView(APIView):
                 type=openapi.TYPE_STRING,
                 format=openapi.FORMAT_PASSWORD,
                 required=True,
-                description='Mot de passe'
+                description='Password'
             ),
             openapi.Parameter(
                 name='first_name',
                 in_=openapi.IN_FORM,
                 type=openapi.TYPE_STRING,
                 required=False,
-                description='Prénom (optionnel)'
+                description='First name (optional)'
             ),
             openapi.Parameter(
                 name='last_name',
                 in_=openapi.IN_FORM,
                 type=openapi.TYPE_STRING,
                 required=False,
-                description='Nom de famille (optionnel)'
+                description='Last name (optional)'
             ),
             openapi.Parameter(
                 name='face_image',
                 in_=openapi.IN_FORM,
                 type=openapi.TYPE_FILE,
                 required=False,
-                description='Image du visage pour la vérification biométrique'
+                description='Facial image for biometric verification'
             ),
         ],
         responses={
             201: openapi.Response(
-                description='Utilisateur créé avec succès',
+                description='User successfully created',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -109,7 +109,7 @@ class SignupView(APIView):
                     }
                 )
             ),
-            400: 'Données invalides'
+            400: 'Invalid data'
         }
     )
     def post(self, request):
@@ -139,11 +139,11 @@ class SignupView(APIView):
 class LoginView(APIView):
     parser_classes = (JSONParser,)
     @swagger_auto_schema(
-        operation_description="Connexion initiale avec nom d'utilisateur et mot de passe",
+        operation_description="Initial login with username and password",
         request_body=UserLoginSerializer,
         responses={
             200: openapi.Response(
-                description='Connexion réussie, vérification par email requise',
+                description='Login successful, email verification required',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -154,8 +154,8 @@ class LoginView(APIView):
                     }
                 )
             ),
-            400: 'Identifiants invalides',
-            400: 'Données invalides'
+            400: 'Invalid credentials',
+            400: 'Invalid data'
         }
     )
     def post(self, request):
@@ -188,17 +188,17 @@ class VerifyEmailCodeView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (JSONParser,)
     @swagger_auto_schema(
-        operation_description="Vérification du code envoyé par email",
+        operation_description="Verification of the code sent via email",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['code'],
             properties={
-                'code': openapi.Schema(type=openapi.TYPE_STRING, description='Code à 6 chiffres envoyé par email'),
+                'code': openapi.Schema(type=openapi.TYPE_STRING, description='6-digit code sent via email'),
             },
         ),
         responses={
             200: openapi.Response(
-                description='Code email vérifié',
+                description='Email code verified',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -208,8 +208,8 @@ class VerifyEmailCodeView(APIView):
                     }
                 )
             ),
-            400: 'Code invalide ou expiré',
-            404: 'Utilisateur non trouvé'
+            400: 'Invalid or expired code',
+            404: 'User not found'
         },
         security=[{'Bearer': []}]
     )
@@ -249,19 +249,19 @@ class FaceEnrollmentView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     
     @swagger_auto_schema(
-        operation_description="Enregistrement d'une image faciale pour un utilisateur",
+        operation_description="Register a facial image for a user",
         manual_parameters=[
             openapi.Parameter(
                 name='face_image',
                 in_=openapi.IN_FORM,
                 type=openapi.TYPE_FILE,
                 required=True,
-                description='Image du visage pour enregistrement'
+                description='Facial image for registration'
             ),
         ],
         responses={
             200: openapi.Response(
-                description='Image du visage enregistrée',
+                description='Facial image successfully registered',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -270,8 +270,8 @@ class FaceEnrollmentView(APIView):
                     }
                 )
             ),
-            400: 'Image non fournie',
-            404: 'Utilisateur non trouvé'
+            400: 'Facial image not provided',
+            404: 'User not found'
         },
         security=[{'Bearer': []}]
     )
@@ -312,19 +312,19 @@ class FaceVerificationView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     
     @swagger_auto_schema(
-        operation_description="Vérification de l'identité par reconnaissance faciale",
+        operation_description="Identity verification through facial recognition",
         manual_parameters=[
             openapi.Parameter(
                 name='face_image',
                 in_=openapi.IN_FORM,
                 type=openapi.TYPE_FILE,
                 required=True,
-                description='Image du visage pour vérification'
+                description='Facial image for verification'
             ),
         ],
         responses={
             200: openapi.Response(
-                description='Visage vérifié, connexion complète',
+                description='Face verified, login complete',
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -335,10 +335,10 @@ class FaceVerificationView(APIView):
                     }
                 )
             ),
-            400: 'Image non fournie ou vérification email requise',
-            401: 'Vérification faciale échouée',
-            404: 'Utilisateur non trouvé',
-            500: 'Erreur de service'
+            400: 'Image not provided or email verification required',
+            401: 'Facial verification failed',
+            404: 'User not found',
+            500: 'Service error'
         },
         security=[{'Bearer': []}]
     )

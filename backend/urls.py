@@ -6,9 +6,9 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="API d'Authentification à Double Facteur",
+        title="Secure Communication API",
         default_version='v1',
-        description="API pour l'inscription, la connexion et l'authentification à double facteur (email et reconnaissance faciale)",
+        description="This is the backend folder of a system for secure communication between clients and banks, featuring peer-to-peer (P2P) connections.",
         terms_of_service="https://www.example.com/terms/",
         contact=openapi.Contact(email="contact@example.com"),
         license=openapi.License(name="BSD License"),
