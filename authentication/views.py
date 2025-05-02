@@ -98,7 +98,6 @@ class LoginView(APIView):
 class VerifyEmailCodeView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
-        print("Vérification du code email")
         user_id = request.user.id
         
         if not user_id:
@@ -147,13 +146,10 @@ class FaceEnrollmentView(APIView):
         if not face_image:
             return Response({'error': 'Image du visage non fournie'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Créer ou mettre à jour l'entrée UserFace
         if hasattr(user, 'face') and user.face:
-            # Mettre à jour l'image existante
             user.face.image = face_image
             user.face.save()
         else:
-            # Créer une nouvelle entrée UserFace
             user_face = UserFace.objects.create(user=user, image=face_image)
             user.face = user_face
             user.save()
@@ -168,7 +164,7 @@ class FaceVerificationView(APIView):
     def post(self, request):
         # user_id = request.session.get('pre_2fa_user_id') or request.data.get('user_id')
         user_id = request.user.id
-        
+
         if not user_id:
             return Response({'error': 'User ID non fourni'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -203,8 +199,8 @@ class FaceVerificationView(APIView):
         try:
             # Préparer l'appel à l'API Face++
             api_url = 'https://api-us.faceplusplus.com/facepp/v3/compare'
-            api_key = '0QW3oIVVzrsyJF91x56-wEtCuOBZGToh'  # Remplacez par votre clé API
-            api_secret = 'ZVAqxq0-WPnGIr10IeqKM3OYe4yyddKE'  # Remplacez par votre secret API
+            api_key = '0QW3oIVVzrsyJF91x56-wEtCuOBZGToh'  
+            api_secret = 'ZVAqxq0-WPnGIr10IeqKM3OYe4yyddKE' 
             
             files = {
                 'image_file1': open(reference_image_full_path, 'rb'),
@@ -223,23 +219,18 @@ class FaceVerificationView(APIView):
                 confidence = result['confidence']
                 print(f"Face++ confidence score: {confidence}")
                 
-                if confidence > 70:  # Ajustez le seuil selon vos besoins
-                    # Marquer la vérification du visage comme réussie
+                if confidence > 70: 
                     user.face_verified = True
                     user.save()
-                    
-                    # Créer et retourner un token d'authentification (JWT ou autre)
-                    # token = create_auth_token(user)  # À implémenter selon votre système d'authentification
-                    
-                    # Si vous utilisez rest_framework.authtoken
-                    from rest_framework.authtoken.models import Token
-                    token, created = Token.objects.get_or_create(user=user)
-                    
+                    refresh = RefreshToken.for_user(user)
+                    access_token = str(refresh.access_token)
+
                     return Response({
                         'message': 'Visage vérifié, connexion réussie!',
-                        'token': token.key,
-                        'user_id': user.id
-                    }, status=status.HTTP_200_OK)
+                        'user_id': user.id,
+                        'access': access_token,         
+                        'refresh': str(refresh),
+                    })
                 else:
                     return Response({'error': 'La vérification du visage a échoué.'}, status=status.HTTP_401_UNAUTHORIZED)
             else:
@@ -251,13 +242,11 @@ class FaceVerificationView(APIView):
                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         finally:
-            # Nettoyage des fichiers
             if 'files' in locals():
                 if 'image_file1' in files:
                     files['image_file1'].close()
                 if 'image_file2' in files:
                     files['image_file2'].close()
             
-            # Supprimer le fichier temporaire
             if default_storage.exists(temp_live_path):
                 default_storage.delete(temp_live_path)
