@@ -48,7 +48,7 @@ def send_email_code(user):
     return True
 
 class SignupView(APIView):
-    parser_classes = (MultiPartParser, FormParser)  # Important: définir les parsers
+    # parser_classes = (MultiPartParser, FormParser)  # Important: définir les parsers
     
     @swagger_auto_schema(
         operation_description="Register a new user with an option to upload a facial image",
