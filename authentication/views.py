@@ -154,7 +154,7 @@ class LoginView(APIView):
                     }
                 )
             ),
-            401: 'Identifiants invalides',
+            400: 'Identifiants invalides',
             400: 'Données invalides'
         }
     )
@@ -181,7 +181,7 @@ class LoginView(APIView):
                     'access': access_token,         
                     'refresh': str(refresh),
                 })
-            return Response({'error': 'Identifiants invalides'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Identifiants invalides'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyEmailCodeView(APIView):
