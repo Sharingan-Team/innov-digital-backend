@@ -287,6 +287,9 @@ class FaceEnrollmentView(APIView):
         except CustomUser.DoesNotExist:
             return Response({'error': 'Utilisateur non trouvé'}, status=status.HTTP_404_NOT_FOUND)
         
+        if not user.email_verified:
+            return Response({'error': 'Vous devez d\'abord effectuer la vérification en deux étapes (2FA) par email.'}, 
+                    status=status.HTTP_400_BAD_REQUEST)
         face_image = request.FILES.get('face_image')
         if not face_image:
             return Response({'error': 'Image du visage non fournie'}, status=status.HTTP_400_BAD_REQUEST)
