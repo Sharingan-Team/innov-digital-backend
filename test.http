@@ -1,8 +1,31 @@
-POST /api/token HTTP/1.1
+POST http://127.0.0.1:8000/api/auth/login/ HTTP/1.1
 Host: localhost
 Content-Type: application/json
 
 {
-    "username": "oussama",
-    "passwd": "11221122"
+    "username": "amsinse",
+    "password": "Sharingan/"
+}
+
+### signup 
+POST http://127.0.0.1:8000/api/auth/signup/ HTTP/1.1
+Host: localhost
+Content-Type: application/json
+
+{
+    "username": "amsinse",
+    "email" : "lo_chergsuelaine@esi.dz", 
+    "password": "Sharingan/"
+}
+
+###  
+POST http://127.0.0.1:8000/api/auth/verify-email/ HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2ODE2MjEyLCJpYXQiOjE3NDYyMTE0MTIsImp0aSI6ImEzOGI0OWVhYmQ3MDQ0ZWRiYjI3MDQ3NDc2YzI2OTk5IiwidXNlcl9pZCI6Nn0.d0e4Z4N9wdoEBCp1477zMyx4wsJIOIY7uQU9FPhzNM4
+Host: localhost
+Content-Type: application/json
+
+{
+    "user_id": "6",
+    "code" : "573411", 
+    "password": "Sharingan/"
 }

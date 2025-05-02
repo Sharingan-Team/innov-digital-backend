@@ -1,16 +1,12 @@
 from django.urls import path
-from .views import user_registration_view
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-    TokenBlacklistView,
-)
+from .views import SignupView, LoginView, VerifyEmailCodeView, FaceVerificationView, FaceEnrollmentView
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    path('token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
-    path('register/', user_registration_view, name='user_registration')
-]
+    path('signup/', SignupView.as_view(), name='signup'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('verify-email/', VerifyEmailCodeView.as_view(), name='verify_email'),
+    path('verify-face/', FaceVerificationView.as_view(), name='verify_face'),
+    path('enroll-face/', FaceEnrollmentView.as_view(), name='enroll_face'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
