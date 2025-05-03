@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth import authenticate, login
 from django.conf import settings
+from django.core.mail import send_mail
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.contrib.auth import get_user_model
@@ -24,28 +25,45 @@ from .serializers import CustomUserSerializer, UserLoginSerializer, EmailCodeSer
 CustomUser = get_user_model()
 
 def send_email_code(user):
+    # Generate a random 6-digit code
     code = str(random.randint(100000, 999999))
     user.email_code = code
     user.email_code_expires = timezone.now() + timezone.timedelta(minutes=10)
     user.save()
+
+    subject = 'Your verification code'
+    message = f'Hello {user.username},\n\nYour 2FA verification code is: {code}\n\nPlease enter this code to complete your process.'
+
+    send_mail(
+        subject,
+        message,
+        settings.EMAIL_HOST_USER,  # your Gmail, defined in settings.py
+        [user.email],
+        fail_silently=False,  # set to True if you want to suppress errors
+    )
+# def send_email_code(user):
+#     code = str(random.randint(100000, 999999))
+#     user.email_code = code
+#     user.email_code_expires = timezone.now() + timezone.timedelta(minutes=10)
+#     user.save()
     
-    # Uncomment this when ready to actually send emails
-    # try:
-    #     subject = "Votre code de vérification"
-    #     email_from = getattr(settings, 'EMAIL_FROM', 'no-reply@example.com')
-    #     print(f"Sending email to {user.email} with code {code}")
-    #     email = EmailMessage(
-    #         subject,
-    #         f"Code: {code}",
-    #         email_from,
-    #         [user.email],
-    #     )
-    #     email.send(fail_silently=False)
-    #     return True
-    # except Exception as e:
-    #     print(f"Email send error: {e}")
-    #     return False
-    return True
+#     # Uncomment this when ready to actually send emails
+#     # try:
+#     #     subject = "Votre code de vérification"
+#     #     email_from = getattr(settings, 'EMAIL_FROM', 'no-reply@example.com')
+#     #     print(f"Sending email to {user.email} with code {code}")
+#     #     email = EmailMessage(
+#     #         subject,
+#     #         f"Code: {code}",
+#     #         email_from,
+#     #         [user.email],
+#     #     )
+#     #     email.send(fail_silently=False)
+#     #     return True
+#     # except Exception as e:
+#     #     print(f"Email send error: {e}")
+#     #     return False
+#     return True
 
 class SignupView(APIView):
     # parser_classes = (MultiPartParser, FormParser)  # Important: définir les parsers
@@ -119,7 +137,8 @@ class SignupView(APIView):
         user_serializer = CustomUserSerializer(data=request.data)
         if user_serializer.is_valid():
             user = user_serializer.save()
-            
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
             # Traiter l'image du visage si elle existe
             if face_image:
                 # Créer un UserFace associé à l'utilisateur
@@ -132,7 +151,9 @@ class SignupView(APIView):
             
             return Response({
                 'message': 'Utilisateur créé. Veuillez vérifier votre email pour le code de vérification.',
-                'user_id': user.id
+                'user_id': user.id, 
+                'access': access_token,         
+                'refresh': str(refresh),
             }, status=status.HTTP_201_CREATED)
         return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -336,7 +357,7 @@ class FaceVerificationView(APIView):
                 )
             ),
             400: 'Image not provided or email verification required',
-            401: 'Facial verification failed',
+            400: 'Facial verification failed',
             404: 'User not found',
             500: 'Service error'
         },
@@ -413,7 +434,7 @@ class FaceVerificationView(APIView):
                         'refresh': str(refresh),
                     })
                 else:
-                    return Response({'error': 'La vérification du visage a échoué.'}, status=status.HTTP_401_UNAUTHORIZED)
+                    return Response({'error': 'La vérification du visage a échoué.'}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response({'error': result.get('error_message', 'Erreur API Face++')}, 
                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
